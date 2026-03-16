@@ -1,0 +1,96 @@
+version: "3.9"
+
+services:
+  db:
+    image: mysql:8.0
+    container_name: stock_db
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: stock_db
+      MYSQL_USER: stock_user
+      MYSQL_PASSWORD: stock_pass
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-ppassword"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: stock_redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: ./stock-ai-backend
+      dockerfile: Dockerfile
+    container_name: stock_api
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./.env
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./stock-ai-backend:/app
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  worker:
+    build:
+      context: ./stock-ai-backend
+      dockerfile: Dockerfile
+    container_name: stock_worker
+    env_file:
+      - ./.env
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./stock-ai-backend:/app
+    command: celery -A app.tasks.celery_app worker --loglevel=info -c 2
+
+  beat:
+    build:
+      context: ./stock-ai-backend
+      dockerfile: Dockerfile
+    container_name: stock_beat
+    env_file:
+      - ./.env
+    depends_on:
+      - redis
+    volumes:
+      - ./stock-ai-backend:/app
+    command: celery -A app.tasks.celery_app beat --loglevel=info
+
+  frontend:
+    build:
+      context: ./stock-ai-frontend
+      dockerfile: Dockerfile
+    container_name: stock_frontend
+    ports:
+      - "5173:5173"
+    env_file:
+      - ./.env
+    volumes:
+      - ./stock-ai-frontend:/app
+      - /app/node_modules
+    depends_on:
+      - api
+
+volumes:
+  db_data:
