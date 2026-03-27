@@ -31,7 +31,7 @@ export const useAddPortfolio = () => {
 export const useUpdatePortfolio = () => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, payload }: { id: number; payload: { avg_price?: number; quantity?: number; memo?: string } }) =>
+    mutationFn: ({ id, payload }: { id: number; payload: { avg_price?: number; quantity?: number; memo?: string; group_name?: string } }) =>
       portfolioApi.update(id, payload),
     onSuccess: () => qc.invalidateQueries({ queryKey: KEY }),
   });

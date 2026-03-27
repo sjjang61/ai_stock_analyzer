@@ -9,12 +9,14 @@ interface CreatePayload {
   avg_price:   number;
   quantity:    number;
   memo?:       string;
+  group_name?: string;
 }
 
 interface UpdatePayload {
-  avg_price?: number;
-  quantity?:  number;
-  memo?:      string;
+  avg_price?:  number;
+  quantity?:   number;
+  memo?:       string;
+  group_name?: string;
 }
 
 export const portfolioApi = {

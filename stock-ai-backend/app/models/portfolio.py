@@ -13,6 +13,7 @@ class Portfolio(Base):
     is_domestic = Column(Boolean, default=True)
     avg_price   = Column(Float, nullable=False)   # 평단가
     quantity    = Column(Integer, nullable=False)  # 수량
+    group_name  = Column(String(100), nullable=True, server_default="기본")  # 그룹 분류
     memo        = Column(String(500))              # 메모 (선택)
     created_at  = Column(DateTime, server_default=func.now())
     updated_at  = Column(DateTime, server_default=func.now(), onupdate=func.now())

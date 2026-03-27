@@ -35,12 +35,14 @@ class PortfolioCreate(BaseModel):
     avg_price:   float
     quantity:    int
     memo:        Optional[str] = None
+    group_name:  Optional[str] = "기본"
 
 
 class PortfolioUpdate(BaseModel):
-    avg_price: Optional[float] = None
-    quantity:  Optional[int]   = None
-    memo:      Optional[str]   = None
+    avg_price:  Optional[float] = None
+    quantity:   Optional[int]   = None
+    memo:       Optional[str]   = None
+    group_name: Optional[str]   = None
 
 
 # ── 헬퍼 ────────────────────────────────────────────────────────────────────────
@@ -55,6 +57,7 @@ def _row_to_dict(p: Portfolio) -> dict:
         "avg_price":   p.avg_price,
         "quantity":    p.quantity,
         "total_cost":  round(p.avg_price * p.quantity, 2),
+        "group_name":  p.group_name or "기본",
         "memo":        p.memo,
         "created_at":  p.created_at.isoformat() if p.created_at else None,
         "updated_at":  p.updated_at.isoformat() if p.updated_at else None,
@@ -128,6 +131,7 @@ async def add_portfolio(body: PortfolioCreate, db: AsyncSession = Depends(get_db
         is_domestic=body.is_domestic,
         avg_price=body.avg_price,
         quantity=body.quantity,
+        group_name=body.group_name or "기본",
         memo=body.memo,
     )
     db.add(item)
@@ -154,6 +158,8 @@ async def update_portfolio(
         item.quantity = body.quantity
     if body.memo is not None:
         item.memo = body.memo
+    if body.group_name is not None:
+        item.group_name = body.group_name
 
     await db.commit()
     await db.refresh(item)

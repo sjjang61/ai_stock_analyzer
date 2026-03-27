@@ -1,6 +1,6 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState, useEffect } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
-import { Star, Brain, RefreshCw } from "lucide-react";
+import { Star, Brain, ChevronDown } from "lucide-react";
 import { useStockDetail, useStockPrice } from "@/hooks/useStocks";
 import { useAnalyzeStock } from "@/hooks/useAnalyze";
 import { useWatchlistStore } from "@/store/useWatchlistStore";
@@ -33,8 +33,19 @@ export const StockDetailPage = () => {
 
   const { data: detail } = useStockDetail(ticker!, isDomestic);
   const { data: prices, isLoading: pricesLoading } = useStockPrice(ticker!, period, isDomestic);
-  const { has, add, remove } = useWatchlistStore();
+  const { has, add, remove, groups } = useWatchlistStore();
   const inWatchlist = has(ticker!);
+  const [groupMenuOpen, setGroupMenuOpen] = useState(false);
+  const groupMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (groupMenuRef.current && !groupMenuRef.current.contains(e.target as Node))
+        setGroupMenuOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
   const { mutate: analyze, isPending: analyzing } = useAnalyzeStock();
 
   const currentPrice = prices?.[prices.length - 1]?.close;
@@ -59,26 +70,55 @@ export const StockDetailPage = () => {
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-bold text-gray-900">{detail?.name ?? ticker}</h1>
-            <button
-              disabled={!detail}
-              onClick={() => {
-                if (inWatchlist) {
-                  remove(ticker!);
-                } else {
-                  add({
-                    ticker: ticker!,
-                    name: detail!.name,
-                    market: detail!.market,
-                    isDomestic,
-                  });
-                }
-              }}
-            >
-              <Star
-                size={20}
-                className={inWatchlist ? "fill-yellow-400 text-yellow-400" : "text-gray-300"}
-              />
-            </button>
+            <div className="relative" ref={groupMenuRef}>
+              {inWatchlist ? (
+                <button
+                  onClick={() => remove(ticker!)}
+                  className="p-1 rounded-lg hover:bg-yellow-50 transition-colors"
+                  title="관심 종목 해제"
+                >
+                  <Star size={20} className="fill-yellow-400 text-yellow-400" />
+                </button>
+              ) : (
+                <div className="flex items-center">
+                  <button
+                    disabled={!detail}
+                    onClick={() => {
+                      if (groups.length <= 1) {
+                        add({ ticker: ticker!, name: detail!.name, market: detail!.market, isDomestic });
+                      } else {
+                        setGroupMenuOpen((v) => !v);
+                      }
+                    }}
+                    className="p-1 rounded-lg hover:bg-gray-100 transition-colors flex items-center gap-0.5"
+                    title="관심 종목 추가"
+                  >
+                    <Star size={20} className="text-gray-300" />
+                    {groups.length > 1 && <ChevronDown size={12} className="text-gray-400" />}
+                  </button>
+                </div>
+              )}
+
+              {/* 그룹 선택 드롭다운 */}
+              {groupMenuOpen && !inWatchlist && (
+                <div className="absolute left-0 top-9 z-30 bg-white border border-gray-200 rounded-xl shadow-lg min-w-[150px] py-1">
+                  <p className="px-3 py-1.5 text-xs text-gray-400 font-medium">그룹 선택</p>
+                  {groups.map((g) => (
+                    <button
+                      key={g.name}
+                      onClick={() => {
+                        add({ ticker: ticker!, name: detail!.name, market: detail!.market, isDomestic, group: g.name });
+                        setGroupMenuOpen(false);
+                      }}
+                      className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
+                    >
+                      <span className="w-2 h-2 rounded-full" style={{ backgroundColor: g.color }} />
+                      {g.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
           <p className="text-gray-400 text-sm font-mono">{ticker} · {isDomestic ? "국내 주식" : "해외 주식"}</p>
           {currentPrice && (

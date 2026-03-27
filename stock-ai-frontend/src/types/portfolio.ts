@@ -10,6 +10,7 @@ export interface PortfolioItem {
   avg_price:   number;
   quantity:    number;
   total_cost:  number;
+  group_name:  string;
   memo?:       string;
   created_at?: string;
   updated_at?: string;
